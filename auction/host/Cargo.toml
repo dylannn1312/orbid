@@ -1,0 +1,15 @@
+[package]
+name = "auction-host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+auction-methods = { workspace = true }
+auction-core = { workspace = true }
+risc0-zkvm = { workspace = true, default-features = false, features = ["std", "client"] }
+risc0-ethereum-contracts = "3.0"
+serde = { workspace = true }
+serde_json = "1.0"
+hex = { workspace = true }
+anyhow = { workspace = true }
+sha2 = { workspace = true }

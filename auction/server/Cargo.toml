@@ -1,0 +1,20 @@
+[package]
+name = "auction-server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "auction-server"
+path = "src/main.rs"
+
+[dependencies]
+auction-methods = { workspace = true }
+auction-core = { workspace = true }
+risc0-zkvm = { workspace = true, default-features = false, features = ["std", "client"] }
+risc0-ethereum-contracts = "3.0"
+serde = { workspace = true }
+hex = { workspace = true }
+anyhow = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+axum = "0.7"
+tower-http = { version = "0.6", features = ["cors"] }

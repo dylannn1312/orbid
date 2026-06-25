@@ -1,0 +1,15 @@
+{
+  "name": "orbid-interop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Orbid-ECIES v1 encryptor (bidder side) - must match auction-core decrypt byte-for-byte.",
+  "scripts": {
+    "encrypt": "node encrypt.mjs"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^1.0.0",
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0"
+  }
+}

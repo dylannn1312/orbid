@@ -1,0 +1,38 @@
+# Vendored subset of NethermindEth/stellar-risc0-verifier (Apache-2.0).
+# Only the standalone Groth16 verifier + its interface + build helper are kept;
+# the router / emergency-stop / timelock / governance crates (which pull
+# OpenZeppelin git deps) are omitted. We call this verifier's `verify` directly
+# from the sudoku contract. parameters.json is pinned to RISC Zero v3.0.0.
+[workspace]
+members = [
+    "contracts/interface",
+    "contracts/groth16-verifier",
+    "tools/build-utils",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+ark-bn254 = "0.5.0"
+ark-ec = "0.5.0"
+ark-ff = "0.5.0"
+ark-serialize = "0.5.0"
+soroban-sdk = "25.1.0"
+hex = "0.4.3"
+sha2 = "0.10.9"
+
+build-utils = { path = "tools/build-utils" }
+risc0-interface = { path = "contracts/interface" }
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+panic = "abort"
+codegen-units = 1
+lto = true

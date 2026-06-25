@@ -1,0 +1,15 @@
+target/
+**/target/
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.local
+*.wasm
+.owner-key.json
+interop/vector.json
+.DS_Store
+DEMO.md
+.idea
+.vscode
