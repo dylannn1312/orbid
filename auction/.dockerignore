@@ -1,0 +1,33 @@
+# Build context is auction/. Keep it lean and never bake artifacts/secrets in.
+
+# Rust build artifacts (largest by far)
+target
+**/target
+**/*.rs.bk
+
+# Docker / VCS / tooling meta - irrelevant to the build
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.github
+.claude
+
+# Editor / OS cruft
+.idea
+.vscode
+.DS_Store
+*.swp
+
+# Docs & notes
+*.md
+
+# Secrets / local config - must never reach the image
+.env
+.env.*
+*.owner-key.json
+.owner-key.json
+vector.json
+
+# Logs
+*.log
