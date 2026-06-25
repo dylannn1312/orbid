@@ -10,7 +10,8 @@ import {
   scI128,
   scBytes,
 } from './soroban';
-import { bytesToHex, hexToBytes } from './ecies';
+import { hexToBytes } from './ecies';
+import { serializeAuctionInput, parseJournal } from './risc0';
 import { USDC_DECIMALS, USDC_SCALE } from './format';
 
 const AUCTION = process.env.NEXT_PUBLIC_AUCTION_CONTRACT!;
@@ -258,8 +259,28 @@ export interface ProofResult {
   image_id: string;
 }
 
-// Stateless prover: the seller's per-auction secret key is sent in the request
-// (derived client-side from a wallet signature, never stored server-side).
+function bytesToBase64(b: Uint8Array): string {
+  let s = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < b.length; i += CHUNK) {
+    s += String.fromCharCode(...b.subarray(i, i + CHUNK));
+  }
+  return btoa(s);
+}
+
+// The guest ELF, bundled as a static asset. Its hash is the on-chain image_id.
+let elfB64Cache: string | null = null;
+async function loadGuestElfB64(): Promise<string> {
+  if (elfB64Cache) return elfB64Cache;
+  const res = await fetch('/orbid-guest.bin');
+  if (!res.ok) throw new Error(`failed to load guest ELF: ${res.status}`);
+  elfB64Cache = bytesToBase64(new Uint8Array(await res.arrayBuffer()));
+  return elfB64Cache;
+}
+
+// The prover is now program-agnostic (Bonsai-style): the frontend builds the
+// RISC0 input stream, ships the guest ELF, and decodes the journal itself. The
+// seller's per-auction secret key only ever travels in the input, never stored.
 export async function generateProof(
   ownerSkHex: string,
   auctionId: number,
@@ -267,22 +288,40 @@ export async function generateProof(
   deposit: bigint,
   ciphertexts: Uint8Array[],
 ): Promise<ProofResult> {
+  const input = serializeAuctionInput({
+    sk: hexToBytes(ownerSkHex.replace(/^0x/, '')),
+    auctionId,
+    ciphertexts,
+    reserve,
+    deposit,
+  });
+  const elf = await loadGuestElfB64();
+
   const res = await fetch(`${PROVER_URL}/api/v1/generate-proof`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      owner_sk: ownerSkHex,
-      auction_id: auctionId,
-      reserve: reserve.toString(),
-      deposit: deposit.toString(),
-      ciphertexts: ciphertexts.map((c) => bytesToHex(c)),
+      elf,
+      input: bytesToBase64(input),
+      receipt_kind: 'groth16',
     }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Prover error ${res.status}: ${text || res.statusText}`);
   }
-  return (await res.json()) as ProofResult;
+  const { seal, journal, image_id } = (await res.json()) as {
+    seal: string;
+    journal: string;
+    image_id: string;
+  };
+  const { winnerIndex, secondPrice } = parseJournal(hexToBytes(journal));
+  return {
+    seal,
+    winner_index: winnerIndex,
+    second_price: secondPrice.toString(),
+    image_id,
+  };
 }
 
 export { hexToBytes };

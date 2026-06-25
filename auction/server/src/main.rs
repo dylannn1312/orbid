@@ -1,44 +1,59 @@
-//! Orbid proving service - stateless.
+//! General RISC0 proving service - stateless, program-agnostic (Bonsai-style).
 //!
-//! Holds no keys. The seller derives their per-auction secp256k1 key client-side
-//! (from a wallet signature) and sends it in the request alongside the auction's
-//! public params + on-chain bid ciphertexts. The service decrypts the bids,
-//! proves the Vickrey outcome (RISC0 Groth16), and returns the seal - which the
-//! seller then submits to `finalize`. Set `BONSAI_API_KEY` + `BONSAI_API_URL` to
-//! prove on Bonsai instead of locally (no code change).
+//! Holds no keys and knows nothing about any specific guest. A client uploads a
+//! guest ELF + the already-serialized input stream (RISC0 word serde), the
+//! service proves it (Groth16) and returns the seal, the raw journal, and the
+//! image id it computed from the ELF. The client decodes the journal itself.
+//!
+//! For Orbid the caller is the frontend: it serializes its `AuctionInput`, ships
+//! the bundled guest ELF, and parses `winner_index`/`second_price` out of the
+//! returned journal. Set `BONSAI_API_KEY` + `BONSAI_API_URL` to prove on Bonsai
+//! instead of locally (no code change).
 //!
 //!   cargo run -p auction-server --release
+//!
+//!   POST /api/v1/generate-proof
+//!     { "elf": "<base64>", "input": "<base64>", "receipt_kind": "groth16" }
+//!   -> { "seal": "<hex>", "journal": "<hex>", "image_id": "<hex>" }
 
-use auction_core::{parse_journal, AuctionInput};
-use auction_methods::{AUCTION_ELF, AUCTION_ID};
 use axum::{
     http::StatusCode,
     routing::{get, post},
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use risc0_ethereum_contracts::encode_seal;
-use risc0_zkvm::{default_prover, sha::Digest, ExecutorEnv, ProverOpts};
+use risc0_zkvm::{compute_image_id, default_prover, ExecutorEnv, ProverOpts};
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
 
+/// Proof kind requested by the caller.
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+enum ReceiptKind {
+    #[default]
+    Groth16,
+}
+
 #[derive(Deserialize)]
 struct ProveReq {
-    /// Per-auction secp256k1 secret key (hex, 32 bytes) - derived client-side,
-    /// never persisted by this service.
-    owner_sk: String,
-    auction_id: u64,
-    /// u128 as decimal strings (JSON numbers can't hold u128 precisely).
-    reserve: String,
-    deposit: String,
-    /// Bid ciphertexts in on-chain storage order (hex, optional 0x prefix).
-    ciphertexts: Vec<String>,
+    /// Guest RISC-V ELF (base64). Its SHA-256 image id is computed here and
+    /// returned; the client deploys the matching id on-chain.
+    elf: String,
+    /// Serialized guest input stream (base64 of RISC0 word serde, LE bytes).
+    input: String,
+    /// Proof kind. Only "groth16" is supported (on-chain verifiable seal).
+    #[serde(default)]
+    receipt_kind: ReceiptKind,
 }
 
 #[derive(Serialize)]
 struct ProveResp {
+    /// Groth16 seal, ABI-encoded for the on-chain verifier (hex).
     seal: String,
-    winner_index: u32,
-    second_price: String,
+    /// Raw journal bytes as committed by the guest (hex). The client decodes it.
+    journal: String,
+    /// Image id computed from the uploaded ELF (hex).
     image_id: String,
 }
 
@@ -51,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "8000".to_string());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
-    println!("orbid prover (stateless) listening on :{port}");
+    println!("risc0 prover (stateless, general) listening on :{port}");
     axum::serve(listener, app).await?;
     Ok(())
 }
@@ -68,37 +83,35 @@ async fn generate_proof(
 }
 
 fn prove(req: ProveReq) -> anyhow::Result<ProveResp> {
-    let sk = hex::decode(req.owner_sk.trim().trim_start_matches("0x"))?;
-    anyhow::ensure!(sk.len() == 32, "owner_sk must be 32 bytes");
-    let reserve: u128 = req.reserve.parse()?;
-    let deposit: u128 = req.deposit.parse()?;
-    let ciphertexts: Vec<Vec<u8>> = req
-        .ciphertexts
-        .iter()
-        .map(|c| hex::decode(c.trim_start_matches("0x")))
-        .collect::<Result<_, _>>()?;
+    // Only Groth16 is supported; the enum makes other variants unreachable.
+    let ReceiptKind::Groth16 = req.receipt_kind;
 
-    let input = AuctionInput {
-        sk,
-        auction_id: req.auction_id,
-        ciphertexts,
-        reserve,
-        deposit,
-    };
+    let elf = B64.decode(req.elf.trim())?;
+    let input_bytes = B64.decode(req.input.trim())?;
+    anyhow::ensure!(
+        input_bytes.len() % 4 == 0,
+        "input length {} is not a multiple of 4 (must be a RISC0 word stream)",
+        input_bytes.len()
+    );
 
-    let env = ExecutorEnv::builder().write(&input)?.build()?;
+    let image_id = compute_image_id(&elf)?;
+
+    // The input is already a serialized RISC0 word stream; feed the words raw.
+    let words: Vec<u32> = input_bytes
+        .chunks_exact(4)
+        .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect();
+    let env = ExecutorEnv::builder().write_slice(&words).build()?;
+
     let receipt = default_prover()
-        .prove_with_opts(env, AUCTION_ELF, &ProverOpts::groth16())?
+        .prove_with_opts(env, &elf, &ProverOpts::groth16())?
         .receipt;
-    receipt.verify(AUCTION_ID)?;
+    receipt.verify(image_id)?;
 
-    let journal_bytes: Vec<u8> = receipt.journal.decode()?;
-    let outcome = parse_journal(&journal_bytes).map_err(anyhow::Error::msg)?;
     let seal = encode_seal(&receipt)?;
     Ok(ProveResp {
         seal: hex::encode(seal),
-        winner_index: outcome.winner_index,
-        second_price: outcome.second_price.to_string(),
-        image_id: hex::encode(Digest::from(AUCTION_ID).as_bytes()),
+        journal: hex::encode(&receipt.journal.bytes),
+        image_id: hex::encode(image_id.as_bytes()),
     })
 }
