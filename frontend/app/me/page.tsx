@@ -121,6 +121,7 @@ export default function MyActivityPage() {
             eyebrow="As auctioneer"
             title="Listed by you"
             count={listed.length}
+            you={address}
             empty={
               <>
                 You haven&rsquo;t listed any lots yet.{' '}
@@ -135,6 +136,7 @@ export default function MyActivityPage() {
             eyebrow="As bidder"
             title="Bids you joined"
             count={joined.length}
+            you={address}
             empty={
               <>
                 You haven&rsquo;t bid on any lots yet.{' '}
@@ -157,12 +159,14 @@ function Section({
   count,
   empty,
   lots,
+  you,
 }: {
   eyebrow: string;
   title: string;
   count: number;
   empty: React.ReactNode;
   lots: Lot[];
+  you?: string | null;
 }) {
   return (
     <section>
@@ -182,7 +186,7 @@ function Section({
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {lots.map((lot) => (
-            <LotCard key={lot.auction.id} auction={lot.auction} name={lot.name} />
+            <LotCard key={lot.auction.id} auction={lot.auction} name={lot.name} you={you} />
           ))}
         </div>
       )}

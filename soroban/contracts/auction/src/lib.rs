@@ -322,6 +322,16 @@ impl OrbidAuction {
         out
     }
 
+    /// Whether `bidder`'s deposit for this auction has already been paid out
+    /// (a non-winner who withdrew, or the winner whose refund was sent on
+    /// finalize). Lets the UI hide a spent reclaim action.
+    pub fn is_refunded(env: Env, auction_id: u64, bidder: Address) -> bool {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Refunded(auction_id, bidder))
+            .unwrap_or(false)
+    }
+
     pub fn image_id(env: Env) -> BytesN<32> {
         env.storage().instance().get(&DataKey::ImageId).unwrap()
     }

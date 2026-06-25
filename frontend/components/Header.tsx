@@ -55,9 +55,19 @@ export function Header() {
     }
   }, [address]);
 
+  // Poll so the balance tracks bids, refunds, faucet, and settlements without a
+  // manual refresh. Also refresh when the tab regains focus.
   useEffect(() => {
     void refreshBalance();
-  }, [refreshBalance]);
+    if (!address) return;
+    const t = setInterval(() => void refreshBalance(), 12000);
+    const onFocus = () => void refreshBalance();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [refreshBalance, address]);
 
   const handleConnect = useCallback(async () => {
     setBusy(true);

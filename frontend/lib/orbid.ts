@@ -112,6 +112,12 @@ export async function queryAuction(id: number): Promise<Auction> {
   };
 }
 
+// Whether this bidder's deposit was already paid out (winner refund on finalize,
+// or a non-winner who already withdrew). On-chain truth for hiding the reclaim.
+export async function isRefunded(auctionId: number, bidder: string): Promise<boolean> {
+  return !!(await readContract(AUCTION, 'is_refunded', [scU64(auctionId), scAddress(bidder)]));
+}
+
 // ---- Auction writes ----
 
 export async function createAuction(

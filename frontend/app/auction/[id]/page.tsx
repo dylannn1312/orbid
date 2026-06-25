@@ -150,6 +150,7 @@ export default function LotDetailPage() {
 
   const status = auctionStatus(auction);
   const isOwner = address != null && address === auction.seller;
+  const isBidder = address != null && auction.bids.some((b) => b.bidder === address);
   const name = meta?.name ?? `Lot #${auction.tokenId}`;
   const art = lotArtDataUri(auction.tokenId, 640);
 
@@ -262,9 +263,35 @@ export default function LotDetailPage() {
           )}
 
           {status === 'ended' && !isOwner && (
-            <div className="panel border-violet/30 bg-violet/5 p-5 text-sm text-muted">
-              Bidding has closed. The auctioneer is generating the zero-knowledge proof of the
-              outcome. The settlement price will appear here once verified on-chain.
+            <div className="panel border-gold/30 bg-gold/5 p-5">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold/70" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-gold" />
+                </span>
+                <span className="eyebrow text-gold">Waiting on the seller</span>
+              </div>
+              <p className="mt-3 text-sm text-text">
+                Bidding has closed. Settlement now depends on the seller: they have to run the
+                zero-knowledge proof off-chain and finalize it on-chain.{' '}
+                <span className="text-muted">They haven&apos;t done that yet</span> - and there&apos;s
+                no fixed deadline for it.
+              </p>
+              {isBidder ? (
+                <p className="mt-2 text-sm text-muted">
+                  Your deposit stays locked until they settle. Once they do, the winner pays the
+                  second-highest price and everyone else can withdraw their full deposit right here.
+                  No bid amounts are revealed - not even the winner&apos;s.
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-muted">
+                  When the seller settles, the winner and the second-price they pay will appear here.
+                  No bid amounts are revealed - not even the winner&apos;s.
+                </p>
+              )}
+              <p className="mt-3 text-xs text-faint">
+                This page checks for settlement automatically - no need to refresh.
+              </p>
             </div>
           )}
 

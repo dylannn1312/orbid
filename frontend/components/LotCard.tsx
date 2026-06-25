@@ -9,8 +9,19 @@ import { tokenDecimals, tokenLabel } from '@/lib/tokens';
 import { StatusChip } from './StatusChip';
 import { MiniOrbit } from './MiniOrbit';
 
-export function LotCard({ auction, name }: { auction: Auction; name: string }) {
+export function LotCard({
+  auction,
+  name,
+  you,
+}: {
+  auction: Auction;
+  name: string;
+  you?: string | null; // viewer address, to flag your win/loss
+}) {
   const status = auctionStatus(auction);
+  const settled = status === 'settled';
+  const youBid = you != null && auction.bids.some((b) => b.bidder === you);
+  const youWon = youBid && auction.winner === you;
   const art = lotArtDataUri(auction.tokenId, 320);
   const label = tokenLabel(auction.paymentToken);
   const [decimals, setDecimals] = useState<number | null>(null);
@@ -49,10 +60,22 @@ export function LotCard({ auction, name }: { auction: Auction; name: string }) {
         </span>
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-bg-2 via-bg-2/70 to-transparent" />
         <div className="absolute inset-x-4 bottom-3 flex items-center justify-between text-sm">
-          {status === 'settled' ? (
-            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-teal">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden /> Settled
-            </span>
+          {settled ? (
+            youBid ? (
+              <span
+                className={`inline-flex items-center gap-1.5 font-mono text-xs ${youWon ? 'text-gold' : 'text-faint'}`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${youWon ? 'bg-gold' : 'bg-faint'}`}
+                  aria-hidden
+                />
+                {youWon ? 'You won' : 'Outbid'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 font-mono text-xs text-teal">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal" aria-hidden /> Settled
+              </span>
+            )
           ) : (
             <MiniOrbit endTime={auction.endTime} />
           )}
@@ -67,10 +90,12 @@ export function LotCard({ auction, name }: { auction: Auction; name: string }) {
           <h3 className="truncate font-display text-lg font-medium leading-tight text-text">
             {name}
           </h3>
-          <p className="eyebrow mt-1.5">Reserve</p>
+          <p className="eyebrow mt-1.5">{settled ? 'Sold for' : 'Reserve'}</p>
         </div>
         <span className="flex-none font-mono text-base text-gold-gradient">
-          {decimals == null ? '…' : `${fmtToken(auction.reserve, decimals)} ${label}`}
+          {decimals == null
+            ? '…'
+            : `${fmtToken(settled ? auction.secondPrice : auction.reserve, decimals)} ${label}`}
         </span>
       </div>
     </Link>

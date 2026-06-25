@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useStellarWallet } from '@/lib/wallet';
 import { useToast } from './Toast';
-import { Auction, withdraw } from '@/lib/orbid';
+import { Auction, withdraw, tokenBalance, isRefunded } from '@/lib/orbid';
 import { fmtToken, shortAddr, explorerTx, explorerContract } from '@/lib/format';
 
 const VERIFIER = process.env.NEXT_PUBLIC_VERIFIER_CONTRACT;
@@ -25,21 +25,49 @@ export function SettledPanel({
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
 
+  const isSeller = address != null && auction.seller === address;
   const isWinner = address != null && auction.winner === address;
   const didBid = address != null && auction.bids.some((b) => b.bidder === address);
-  const canWithdraw = didBid && !isWinner;
+  // The winner's deposit covers the price; finalize refunds the difference.
+  const winnerRefund = auction.deposit - auction.secondPrice;
+  const involved = isSeller || didBid;
+
+  // Whether this bidder already reclaimed - read from chain (is_refunded view),
+  // so the reclaim action disappears for good once spent.
+  const [claimed, setClaimed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!address || !didBid || isWinner) {
+      setClaimed(false);
+      return;
+    }
+    isRefunded(auction.id, address)
+      .then(setClaimed)
+      .catch(() => setClaimed(false));
+  }, [address, didBid, isWinner, auction.id]);
+  const canWithdraw = didBid && !isWinner && claimed === false;
+
+  const [balance, setBalance] = useState<bigint | null>(null);
+  const loadBalance = useCallback(() => {
+    if (!address || !involved) return;
+    tokenBalance(auction.paymentToken, address)
+      .then(setBalance)
+      .catch(() => setBalance(null));
+  }, [address, involved, auction.paymentToken]);
+  useEffect(() => void loadBalance(), [loadBalance]);
 
   async function handleWithdraw() {
     if (!address) return;
     setBusy(true);
     try {
       const hash = await withdraw(address, signTransaction, auction.id);
+      setClaimed(true);
       push({
         kind: 'success',
-        message: 'Deposit withdrawn.',
+        message: 'Deposit reclaimed.',
         href: explorerTx(hash),
         hrefLabel: 'Transaction',
       });
+      loadBalance();
       onSuccess();
     } catch (e) {
       push({ kind: 'error', message: `Withdraw failed: ${(e as Error).message}` });
@@ -90,10 +118,40 @@ export function SettledPanel({
           <span className="text-faint">Lot now owned by</span>
           <span className="font-mono text-text">{shortAddr(auction.winner, 6, 6)}</span>
         </div>
+
         {isWinner && (
-          <p className="rounded-lg border border-teal/30 bg-teal/5 p-3 text-teal">
-            You won this lot. You paid the settlement price above.
+          <div className="rounded-lg border border-teal/30 bg-teal/5 p-3 text-teal">
+            <p className="font-medium">You won this lot - the NFT is now in your wallet.</p>
+            <p className="mt-1 text-sm text-muted">
+              You locked a {fmtToken(auction.deposit, decimals)} {label} deposit and paid the{' '}
+              {fmtToken(auction.secondPrice, decimals)} {label} settlement price.
+              {winnerRefund > 0n ? (
+                <>
+                  {' '}The {fmtToken(winnerRefund, decimals)} {label} difference was refunded to you
+                  automatically on finalize.
+                </>
+              ) : (
+                <> Your deposit exactly matched the price, so there was nothing to refund.</>
+              )}
+            </p>
+          </div>
+        )}
+
+        {isSeller && (
+          <p className="rounded-lg border border-gold/30 bg-gold/5 p-3 text-sm text-muted">
+            <span className="font-medium text-gold">You sold this lot.</span> The{' '}
+            {fmtToken(auction.secondPrice, decimals)} {label} settlement price was transferred to you
+            when you finalized.
           </p>
+        )}
+
+        {(isSeller || isWinner) && (
+          <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
+            <span className="text-faint">Your {label} balance</span>
+            <span className="font-mono text-text">
+              {balance == null ? '…' : `${fmtToken(balance, decimals)} ${label}`}
+            </span>
+          </div>
         )}
       </div>
 
@@ -153,11 +211,17 @@ export function SettledPanel({
             <div>
               <p className="eyebrow text-teal">Refundable</p>
               <p className="mt-1 text-sm text-muted">
-                You didn&rsquo;t win — your full deposit is yours to reclaim.
+                You didn&rsquo;t win - your full deposit is yours to reclaim.
               </p>
             </div>
             <span className="flex-none font-mono text-lg text-text">
               {fmtToken(auction.deposit, decimals)} {label}
+            </span>
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-teal/20 pt-3 text-sm">
+            <span className="text-faint">Your {label} balance now</span>
+            <span className="font-mono text-text">
+              {balance == null ? '…' : `${fmtToken(balance, decimals)} ${label}`}
             </span>
           </div>
           <button
@@ -167,6 +231,21 @@ export function SettledPanel({
           >
             {busy ? 'Reclaiming…' : `Reclaim your ${fmtToken(auction.deposit, decimals)} ${label} deposit`}
           </button>
+        </div>
+      )}
+
+      {didBid && !isWinner && claimed && (
+        <div className="panel border-teal/30 bg-teal/5 p-5">
+          <p className="eyebrow text-teal">Deposit reclaimed</p>
+          <p className="mt-1 text-sm text-muted">
+            Your {fmtToken(auction.deposit, decimals)} {label} deposit is back in your wallet.
+          </p>
+          <div className="mt-3 flex items-center justify-between border-t border-teal/20 pt-3 text-sm">
+            <span className="text-faint">Your {label} balance</span>
+            <span className="font-mono text-text">
+              {balance == null ? '…' : `${fmtToken(balance, decimals)} ${label}`}
+            </span>
+          </div>
         </div>
       )}
     </div>
