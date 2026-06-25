@@ -45,7 +45,7 @@ export function LotCard({ auction, name }: { auction: Auction; name: string }) {
           <StatusChip status={status} />
         </div>
         <span className="absolute right-3 top-3 rounded-full bg-bg/70 px-2 py-0.5 font-mono text-[10px] text-muted backdrop-blur">
-          #{auction.tokenId}
+          Lot #{auction.id}
         </span>
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-bg-2 via-bg-2/70 to-transparent" />
         <div className="absolute inset-x-4 bottom-3 flex items-center justify-between text-sm">

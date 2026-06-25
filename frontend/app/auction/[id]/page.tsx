@@ -192,7 +192,7 @@ export default function LotDetailPage() {
           <div>
             <div className="mb-3 flex items-center gap-3">
               <StatusChip status={status} />
-              <span className="font-mono text-xs text-faint">Lot #{auction.tokenId}</span>
+              <span className="font-mono text-xs text-faint">Lot #{auction.id}</span>
               <InviteButton
                 auctionId={auction.id}
                 live={status === 'live'}

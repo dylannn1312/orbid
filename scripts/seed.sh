@@ -42,6 +42,6 @@ create_lot() { # name uri token scale reserve deposit duration bid_b0 [bid_b1 bi
 }
 
 echo "▶ seeding lots"
-create_lot "Orbid Pulsar #3" "ipfs://art/3" "$USDC" "$U7" 50  2000 172800 320 510 280
-create_lot "Orbid Helix #4"  "ipfs://art/4" "$USDT" "$U6" 100 1500 172800 800 1200
+create_lot "Orbid Pulsar" "ipfs://art/3" "$USDC" "$U7" 50  2000 172800 320 510 280
+create_lot "Orbid Helix"  "ipfs://art/4" "$USDT" "$U6" 100 1500 172800 800 1200
 echo "✅ seeded demo lots (USDC + USDT)"
