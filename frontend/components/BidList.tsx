@@ -2,6 +2,7 @@
 
 import { SealedBid } from '@/lib/orbid';
 import { fmtToken, shortAddr, ciphertextFingerprint } from '@/lib/format';
+import { Copyable } from './Copyable';
 
 function LockGlyph({ open }: { open?: boolean }) {
   const color = open ? 'var(--gold)' : 'var(--violet)';
@@ -71,7 +72,11 @@ export function BidList({
             <LockGlyph open={showAmount} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-text">{shortAddr(b.bidder, 6, 6)}</span>
+                <Copyable
+                  value={b.bidder}
+                  display={shortAddr(b.bidder, 6, 6)}
+                  className="font-mono text-sm text-text"
+                />
                 {isSelf && (
                   <span className="rounded-full border border-azure/50 bg-azure/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-azure">
                     You

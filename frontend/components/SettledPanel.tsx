@@ -5,6 +5,7 @@ import { useStellarWallet } from '@/lib/wallet';
 import { useToast } from './Toast';
 import { Auction, withdraw, tokenBalance, isRefunded } from '@/lib/orbid';
 import { fmtToken, shortAddr, explorerTx, explorerContract } from '@/lib/format';
+import { Copyable } from './Copyable';
 
 const VERIFIER = process.env.NEXT_PUBLIC_VERIFIER_CONTRACT;
 const IMAGE_ID = process.env.NEXT_PUBLIC_IMAGE_ID;
@@ -110,13 +111,21 @@ export function SettledPanel({
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-surface p-5 text-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-faint">Winner</span>
-          <span className="font-mono text-teal">{shortAddr(auction.winner, 6, 6)}</span>
+          <Copyable
+            value={auction.winner ?? ''}
+            display={shortAddr(auction.winner, 6, 6)}
+            className="font-mono text-teal"
+          />
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-faint">Lot now owned by</span>
-          <span className="font-mono text-text">{shortAddr(auction.winner, 6, 6)}</span>
+          <Copyable
+            value={auction.winner ?? ''}
+            display={shortAddr(auction.winner, 6, 6)}
+            className="font-mono text-text"
+          />
         </div>
 
         {isWinner && (
@@ -162,15 +171,19 @@ export function SettledPanel({
           {IMAGE_ID && (
             <div className="flex items-center justify-between gap-3">
               <dt className="text-faint">Guest image id</dt>
-              <dd className="truncate font-mono text-xs text-muted" title={IMAGE_ID}>
-                {IMAGE_ID.slice(0, 10)}…{IMAGE_ID.slice(-6)}
+              <dd>
+                <Copyable
+                  value={IMAGE_ID}
+                  display={`${IMAGE_ID.slice(0, 10)}…${IMAGE_ID.slice(-6)}`}
+                  className="font-mono text-xs text-muted"
+                />
               </dd>
             </div>
           )}
           {VERIFIER && (
             <div className="flex items-center justify-between gap-3">
               <dt className="text-faint">Groth16 verifier</dt>
-              <dd>
+              <dd className="flex items-center gap-2">
                 <a
                   href={explorerContract(VERIFIER)}
                   target="_blank"
@@ -179,13 +192,14 @@ export function SettledPanel({
                 >
                   {shortAddr(VERIFIER, 6, 6)} ↗
                 </a>
+                <Copyable value={VERIFIER} className="text-faint" />
               </dd>
             </div>
           )}
           {AUCTION && (
             <div className="flex items-center justify-between gap-3">
               <dt className="text-faint">Auction contract</dt>
-              <dd>
+              <dd className="flex items-center gap-2">
                 <a
                   href={explorerContract(AUCTION)}
                   target="_blank"
@@ -194,6 +208,7 @@ export function SettledPanel({
                 >
                   {shortAddr(AUCTION, 6, 6)} ↗
                 </a>
+                <Copyable value={AUCTION} className="text-faint" />
               </dd>
             </div>
           )}
