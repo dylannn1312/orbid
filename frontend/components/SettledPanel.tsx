@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { useStellarWallet } from '@/lib/wallet';
 import { useToast } from './Toast';
 import { Auction, withdraw } from '@/lib/orbid';
-import { fmtToken, shortAddr, explorerTx } from '@/lib/format';
+import { fmtToken, shortAddr, explorerTx, explorerContract } from '@/lib/format';
+
+const VERIFIER = process.env.NEXT_PUBLIC_VERIFIER_CONTRACT;
+const IMAGE_ID = process.env.NEXT_PUBLIC_IMAGE_ID;
+const AUCTION = process.env.NEXT_PUBLIC_AUCTION_CONTRACT;
 
 export function SettledPanel({
   auction,
@@ -46,16 +50,33 @@ export function SettledPanel({
 
   return (
     <div className="space-y-5">
-      {/* The reveal - the emotional peak. */}
+      {/* The reveal - staged so the eye lands on the proof, then the price,
+          then the one fact that matters: the bid itself stayed sealed. */}
       <div className="relative overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-b from-gold/10 to-transparent p-6 text-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-gold/80">
+        <p
+          className="reveal-rise inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-teal"
+          style={{ animationDelay: '0ms' }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-teal shadow-[0_0_10px_2px_rgba(94,234,212,0.7)]" aria-hidden />
+          Proof verified on-chain
+        </p>
+        <p
+          className="reveal-rise mt-4 text-xs uppercase tracking-[0.2em] text-gold/80"
+          style={{ animationDelay: '500ms' }}
+        >
           Settlement price · 2nd-highest bid
         </p>
-        <p className="mt-3 font-display text-5xl font-semibold text-gold drop-shadow-[0_0_24px_rgba(232,179,65,0.45)] sm:text-6xl">
+        <p
+          className="reveal-rise mt-2 font-display text-5xl font-semibold text-gold drop-shadow-[0_0_24px_rgba(232,179,65,0.45)] sm:text-6xl"
+          style={{ animationDelay: '650ms' }}
+        >
           {fmtToken(auction.secondPrice, decimals)}
           <span className="ml-2 text-2xl text-gold/70">{label}</span>
         </p>
-        <p className="mt-4 text-sm text-muted">
+        <p
+          className="reveal-rise mt-4 text-sm text-muted"
+          style={{ animationDelay: '1150ms' }}
+        >
           Every bid amount stayed sealed - even the winner&apos;s.
         </p>
       </div>
@@ -74,6 +95,56 @@ export function SettledPanel({
             You won this lot. You paid the settlement price above.
           </p>
         )}
+      </div>
+
+      {/* Provenance: let anyone confirm the proof actually ran on-chain. */}
+      <div className="rounded-2xl border border-border bg-surface p-5 text-sm">
+        <p className="eyebrow mb-3">Proof provenance</p>
+        <dl className="grid gap-2.5">
+          {IMAGE_ID && (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-faint">Guest image id</dt>
+              <dd className="truncate font-mono text-xs text-muted" title={IMAGE_ID}>
+                {IMAGE_ID.slice(0, 10)}…{IMAGE_ID.slice(-6)}
+              </dd>
+            </div>
+          )}
+          {VERIFIER && (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-faint">Groth16 verifier</dt>
+              <dd>
+                <a
+                  href={explorerContract(VERIFIER)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-xs text-azure hover:underline"
+                >
+                  {shortAddr(VERIFIER, 6, 6)} ↗
+                </a>
+              </dd>
+            </div>
+          )}
+          {AUCTION && (
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-faint">Auction contract</dt>
+              <dd>
+                <a
+                  href={explorerContract(AUCTION)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-xs text-azure hover:underline"
+                >
+                  {shortAddr(AUCTION, 6, 6)} ↗
+                </a>
+              </dd>
+            </div>
+          )}
+        </dl>
+        <p className="mt-3 text-xs leading-relaxed text-faint">
+          The contract recomputed the auction hash from its own stored bids, rebuilt the
+          journal, and ran a native BN254 pairing check. The settlement above is the only
+          outcome that proof attests to.
+        </p>
       </div>
 
       {canWithdraw && (

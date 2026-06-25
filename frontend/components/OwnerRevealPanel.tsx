@@ -19,10 +19,12 @@ export function OwnerRevealPanel({
   const { push } = useToast();
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<'idle' | 'deriving' | 'proving' | 'settling'>('idle');
+  const [offline, setOffline] = useState(false);
 
   async function handleReveal() {
     if (!address) return;
     setBusy(true);
+    setOffline(false);
     try {
       setStage('deriving');
       // Re-derive this auction's secret key from a wallet signature, then verify
@@ -60,7 +62,18 @@ export function OwnerRevealPanel({
       });
       onSuccess();
     } catch (e) {
-      push({ kind: 'error', message: `Reveal failed: ${(e as Error).message}` });
+      // A network-level failure while proving means the prover service isn't
+      // reachable (fetch rejects with a TypeError), as opposed to a proving or
+      // settlement error which carries a real message from the server/chain.
+      const isNetwork =
+        stage === 'proving' &&
+        (e instanceof TypeError || /failed to fetch|networkerror/i.test((e as Error).message));
+      if (isNetwork) {
+        setOffline(true);
+        push({ kind: 'error', message: 'Prover service is offline - start it and try again.' });
+      } else {
+        push({ kind: 'error', message: `Reveal failed: ${(e as Error).message}` });
+      }
     } finally {
       setBusy(false);
       setStage('idle');
@@ -78,6 +91,18 @@ export function OwnerRevealPanel({
         settle on-chain. The proof reveals only the settlement price - every bid amount,
         including the winner&apos;s, stays sealed.
       </p>
+
+      {offline && !busy && (
+        <div className="rounded-lg border border-rose-400/40 bg-rose-500/5 p-3 text-sm">
+          <p className="font-medium text-rose-200">Prover service is offline</p>
+          <p className="mt-1 text-muted">
+            The reveal needs the owner-side prover running. Start it, then retry:
+          </p>
+          <code className="mt-2 block rounded bg-bg/60 px-2.5 py-1.5 font-mono text-xs text-azure">
+            cd auction &amp;&amp; cargo run -p auction-server --release
+          </code>
+        </div>
+      )}
 
       {busy && (
         <div className="rounded-lg border border-border bg-surface p-3 text-sm">

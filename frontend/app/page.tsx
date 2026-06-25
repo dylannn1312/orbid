@@ -13,6 +13,7 @@ import {
 import { LotCard } from '@/components/LotCard';
 import { HeroOrbit } from '@/components/HeroOrbit';
 import { HowItWorks } from '@/components/HowItWorks';
+import { TamperProof } from '@/components/TamperProof';
 import { Select } from '@/components/Select';
 
 interface Lot {
@@ -130,6 +131,8 @@ export default function GalleryPage() {
       </section>
 
       <HowItWorks />
+
+      <TamperProof />
 
       <section id="lots" className="scroll-mt-24">
         <div className="mb-5 border-b border-border/60 pb-4">

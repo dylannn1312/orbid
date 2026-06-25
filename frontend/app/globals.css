@@ -271,6 +271,24 @@ body {
   50% { opacity: 0.4; }
 }
 
+/* Settlement reveal: each beat rises and unblurs in sequence. */
+.reveal-rise {
+  opacity: 0;
+  animation: reveal-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

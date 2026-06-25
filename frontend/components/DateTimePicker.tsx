@@ -115,6 +115,8 @@ export function DateTimePicker({
               key={d}
               type="button"
               disabled={past}
+              aria-pressed={selected}
+              aria-label={`${MONTHS[view.m]} ${d}, ${view.y}`}
               onClick={() => pickDay(d)}
               className={[
                 'relative grid h-9 place-items-center rounded-lg font-mono text-sm transition',

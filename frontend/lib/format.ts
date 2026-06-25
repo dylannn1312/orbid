@@ -75,3 +75,6 @@ export function fmtCountdown(secondsLeft: number): string {
 
 export const explorerTx = (hash: string) =>
   `https://stellar.expert/explorer/testnet/tx/${hash}`;
+
+export const explorerContract = (id: string) =>
+  `https://stellar.expert/explorer/testnet/contract/${id}`;
