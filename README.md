@@ -29,28 +29,33 @@ strongest possible "ZK is load-bearing" story.
 ## Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Browser["Bidder browser"]
-        E["encrypt bid → owner pubkey<br/>(Orbid-ECIES, @noble)"]
-    end
-    subgraph Chain["Soroban (testnet)"]
-        A["auction contract<br/>stores ciphertext + token deposit"]
-        V["RISC0 Groth16 verifier<br/>bn254 pairing_check"]
-        N["NFT lot (escrowed)"]
-    end
-    subgraph Owner["Auctioneer (prover service)"]
-        P["RISC0 guest: decrypt all bids ·<br/>pick highest + 2nd price ·<br/>commit(auction_hash, winner_index, second_price)"]
-    end
+sequenceDiagram
+    participant SE as Seller
+    participant BI as Bidder
+    participant SC as Contract
+    participant ZK as RISC Zero zkVM
+    participant VF as Groth16 Verifier
 
-    E -->|"place_bid(ciphertext)"| A
-    A -->|"read sealed bids"| P
-    P -->|"Groth16 seal + (winner_index, second_price)"| O2["owner submits finalize()"]
-    O2 -->|"finalize(winner_index, second_price, seal)"| A
-    A -->|"recompute auction_hash from stored bids,<br/>rebuild journal, sha256"| A
-    A -->|"cross-contract verify(seal, image_id, journal_digest)"| V
-    V -->|"ok → settle"| A
-    A -->|"transfer lot"| N
-    A -->|"pay owner 2nd price · refund winner · losers withdraw"| A
+    SE->>SE: Derive per-auction secp256k1 key from wallet signature
+    SE->>SC: create_auction(pubkey, payment_token, reserve, deposit) + escrow NFT
+
+    Note over BI: Read the auction's pubkey from chain
+    BI->>BI: Encrypt bid → pubkey (Orbid-ECIES, client-side)
+    BI->>SC: place_bid(ciphertext) + token deposit
+
+    Note over SE,SC: After the deadline - seller settles
+    SC->>SE: Read sealed bids (ciphertexts)
+    SE->>ZK: Owner key + ciphertexts (private input)
+    Note over ZK: Decrypt all bids · pick winner + 2nd price ·<br/>commit(auction_hash, winner_index, second_price)
+    ZK-->>SE: Groth16 proof { seal, journal, image_id }
+    SE->>SC: finalize(winner_index, second_price, seal)
+    Note over SC: Recompute auction_hash from stored bids,<br/>rebuild journal, sha256
+    SC->>VF: verify(seal, image_id, journal_digest)
+    VF-->>SC: ok (native BN254 pairing) / revert
+
+    SC->>BI: Transfer NFT to winner · refund (deposit − 2nd price)
+    SC->>SE: Pay the second price
+    BI->>SC: Losing bidders withdraw their deposit
 ```
 
 **The load-bearing link:** `finalize` takes an owner-supplied `winner_index` + `second_price`, but binds them into the
