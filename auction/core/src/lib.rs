@@ -170,6 +170,9 @@ pub fn run_auction(input: &AuctionInput) -> Result<Outcome, AuctionError> {
         if bid > input.deposit {
             continue;
         }
+        // Strictly-greater wins, so on a tie the first bid in storage order keeps
+        // the lot and the equal bid flows into `second` - i.e. a tie settles at
+        // the tied amount (the one case where the winner pays their own bid).
         if best_index < 0 || bid > best_amount {
             second = best_amount;
             best_amount = bid;
@@ -217,8 +220,16 @@ pub fn parse_journal(bytes: &[u8]) -> Result<Outcome, String> {
     }
     let mut auction_hash = [0u8; 32];
     auction_hash.copy_from_slice(&bytes[..32]);
-    let winner_index = u32::from_le_bytes(bytes[32..36].try_into().unwrap());
-    let second_price = u128::from_le_bytes(bytes[36..52].try_into().unwrap());
+    let winner_index = u32::from_le_bytes(
+        bytes[32..36]
+            .try_into()
+            .map_err(|_| "winner_index slice error".to_string())?,
+    );
+    let second_price = u128::from_le_bytes(
+        bytes[36..52]
+            .try_into()
+            .map_err(|_| "second_price slice error".to_string())?,
+    );
     Ok(Outcome {
         auction_hash,
         winner_index,

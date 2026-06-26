@@ -14,11 +14,16 @@ In a sealed-bid auction the auctioneer **sees every bid**. That's the whole trus
 
 Orbid removes that trust. The auctioneer still decrypts the bids privately, but to settle they must produce a **RISC0
 zk-proof** that the winner and the price were computed correctly **over exactly the bids posted on-chain**. The contract
-verifies the proof natively (BN254 Groth16, Stellar Protocol 25). The proof discloses **only the settlement price** (
+verifies the proof natively (BN254 Groth16, Stellar Protocol 27). The proof discloses **only the settlement price** (
 what the winner pays) - every bid amount, *including the winner's own*, stays sealed forever.
 
 This is ZK doing work nothing else can: proving a correct computation over private inputs. No mixer, no anonymity set,
 no privacy theater.
+
+It's **selective disclosure, not anonymity**: the proof reveals exactly the one fact a settlement needs to be auditable -
+the clearing price - and nothing else. Everyone can verify the auction was settled honestly without anyone learning what
+was bid. That's the compliance-friendly shape of privacy (prove the rule was followed, disclose only what's required),
+not the hide-everything kind.
 
 ## Why Vickrey (second-price)
 
@@ -97,7 +102,7 @@ Every key is **derived deterministically from a wallet signature**, never persis
 
 - **RISC0 zkVM 3.0** - Groth16 proofs over BN254
 - **Soroban SDK 26** - auction, NFT, and SEP-41 token contracts
-- **Stellar Protocol 25** - native `bn254` pairing host functions for on-chain verification
+- **Stellar Protocol 27** - native `bn254` pairing host functions for on-chain verification (testnet)
 - **Orbid-ECIES** - secp256k1 / HKDF-SHA256 / AES-256-GCM (RISC0 `k256` + `sha2` precompiles)
 - **Next.js 15 + Freighter** - client-side encryption and wallet signing
 
