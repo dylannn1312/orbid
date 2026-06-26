@@ -146,6 +146,10 @@ cd ../frontend && pnpm install && pnpm dev
 - **Deposit is a hard bid cap.** Bids are sealed, so the contract escrows one fixed deposit per wallet and ignores any
   bid above it (it would be unbacked). Bidders lock their ceiling up front, and the public deposit bounds the maximum
   bid - though the exact amounts stay sealed. A wallet bids once; re-bidding overwrites it (no second deposit).
+- **Seller-controlled settlement (liveness).** Only the seller can `finalize`, and `withdraw` requires a settled
+  auction - so a seller who dislikes the outcome can simply never settle, leaving bidder deposits escrowed
+  indefinitely. It's a liveness hole, not a theft vector (no one else can take the funds). Mitigation (out of scope): a
+  post-deadline escape hatch that lets bidders reclaim deposits if the seller never finalizes.
 - **Demo scope.** Mock USDC/USDT (open faucet) + native XLM + minimal NFT, testnet only. Proving is ~3 min locally per
   auction; bid count is bounded by proving time.
 

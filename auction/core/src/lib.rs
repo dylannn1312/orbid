@@ -30,7 +30,11 @@
 #![no_std]
 
 extern crate alloc;
-use alloc::{format, string::String, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use aes_gcm::{
     aead::{Aead, KeyInit},
