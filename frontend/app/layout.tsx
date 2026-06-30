@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${display.variable} ${body.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
-      <body className="font-body">
+      <body className="font-body" suppressHydrationWarning>
         <div className="starfield" aria-hidden />
         <StellarProvider>
           <ToastProvider>
