@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import { useStellarWallet } from '@/lib/wallet';
 import { useToast } from './Toast';
@@ -9,32 +10,6 @@ import { fromBaseUnits, shortAddr, explorerTx, USDC_DECIMALS } from '@/lib/forma
 
 const USDC_FAUCET = 5000n * 10_000_000n; // 5,000 USDC at 7 decimals
 const USDT_FAUCET = 5000n * 1_000_000n; // 5,000 USDT at 6 decimals
-
-function OrbitGlyph() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden className="flex-none">
-      <circle cx="14" cy="14" r="4" fill="url(#hg)" />
-      <ellipse
-        cx="14"
-        cy="14"
-        rx="11"
-        ry="5"
-        fill="none"
-        stroke="var(--azure)"
-        strokeWidth="1.2"
-        opacity="0.8"
-        transform="rotate(28 14 14)"
-      />
-      <circle cx="24" cy="11" r="1.8" fill="var(--violet)" />
-      <defs>
-        <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--azure)" />
-          <stop offset="100%" stopColor="var(--violet)" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
 
 export function Header() {
   const { address, isConnected, connect, disconnect, signTransaction } = useStellarWallet();
@@ -104,7 +79,15 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/70 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5" aria-label="Orbid home">
-          <OrbitGlyph />
+          <Image
+            src="/favicon/favicon.svg"
+            alt=""
+            width={40}
+            height={40}
+            className="flex-none"
+            priority
+            unoptimized
+          />
           <span className="font-display text-xl font-semibold tracking-tight text-text">
             Orbid
           </span>

@@ -29,11 +29,18 @@ export const metadata: Metadata = {
   title: 'Orbid · Sealed-bid auctions, settled by proof',
   description:
     'A trustless sealed-bid Vickrey NFT auction on Stellar. Bids stay sealed; the winner pays the second-highest price, proven by zero-knowledge.',
+  icons: {
+    icon: { url: '/favicon/favicon.svg', type: 'image/svg+xml' },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="font-body">
         <div className="starfield" aria-hidden />
         <StellarProvider>
